@@ -1,12 +1,12 @@
 import tkinter as tk
 import random
 
-# 視窗與畫布設定
+# 視窗設定
 WINDOW_WIDTH = 400
 WINDOW_HEIGHT = 400
 CELL_SIZE = 20
+SPEED = 150
 
-# 方向
 UP = "Up"
 DOWN = "Down"
 LEFT = "Left"
@@ -17,25 +17,43 @@ class SnakeGame:
         self.root = root
         self.root.title("貪食蛇 Snake Game")
 
+        # 分數標籤
+        self.score = 0
+        self.score_label = tk.Label(
+            root, text="Score: 0", font=("Arial", 14)
+        )
+        self.score_label.pack()
+
+        # 畫布
         self.canvas = tk.Canvas(
-            root,
-            width=WINDOW_WIDTH,
-            height=WINDOW_HEIGHT,
-            bg="black"
+            root, width=WINDOW_WIDTH, height=WINDOW_HEIGHT, bg="black"
         )
         self.canvas.pack()
 
-        # 初始化
+        # 重新開始按鈕
+        self.restart_btn = tk.Button(
+            root, text="重新開始", font=("Arial", 12),
+            command=self.restart_game
+        )
+        self.restart_btn.pack(pady=5)
+
+        self.root.bind("<Key>", self.change_direction)
+
+        self.init_game()
+        self.game_loop()
+
+    def init_game(self):
         self.direction = RIGHT
         self.snake = [(100, 100), (80, 100), (60, 100)]
         self.food = None
         self.running = True
-
-        # 鍵盤事件
-        self.root.bind("<Key>", self.change_direction)
-
+        self.score = 0
+        self.update_score()
         self.create_food()
-        self.game_loop()
+        self.canvas.delete("all")
+
+    def update_score(self):
+        self.score_label.config(text=f"Score: {self.score}")
 
     def create_food(self):
         while True:
@@ -70,7 +88,7 @@ class SnakeGame:
 
         new_head = (head_x, head_y)
 
-        # 撞牆或撞到自己
+        # 撞牆或撞自己
         if (
             head_x < 0 or head_x >= WINDOW_WIDTH or
             head_y < 0 or head_y >= WINDOW_HEIGHT or
@@ -81,8 +99,9 @@ class SnakeGame:
 
         self.snake.insert(0, new_head)
 
-        # 吃到食物
         if new_head == self.food:
+            self.score += 10
+            self.update_score()
             self.create_food()
         else:
             self.snake.pop()
@@ -93,16 +112,14 @@ class SnakeGame:
         # 畫蛇
         for x, y in self.snake:
             self.canvas.create_rectangle(
-                x, y,
-                x + CELL_SIZE, y + CELL_SIZE,
+                x, y, x + CELL_SIZE, y + CELL_SIZE,
                 fill="green"
             )
 
         # 畫食物
         fx, fy = self.food
         self.canvas.create_oval(
-            fx, fy,
-            fx + CELL_SIZE, fy + CELL_SIZE,
+            fx, fy, fx + CELL_SIZE, fy + CELL_SIZE,
             fill="red"
         )
 
@@ -110,7 +127,7 @@ class SnakeGame:
         if self.running:
             self.move_snake()
             self.draw()
-            self.root.after(150, self.game_loop)
+            self.root.after(SPEED, self.game_loop)
 
     def game_over(self):
         self.running = False
@@ -121,6 +138,10 @@ class SnakeGame:
             font=("Arial", 24),
             text="Game Over"
         )
+
+    def restart_game(self):
+        self.init_game()
+        self.game_loop()
 
 if __name__ == "__main__":
     root = tk.Tk()
