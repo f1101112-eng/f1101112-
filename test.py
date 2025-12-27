@@ -5,7 +5,9 @@ import random
 WINDOW_WIDTH = 400
 WINDOW_HEIGHT = 400
 CELL_SIZE = 20
-SPEED = 150
+
+BASE_SPEED = 150      # 初始速度（毫秒）
+MIN_SPEED = 60        # 最快限制
 
 UP = "Up"
 DOWN = "Down"
@@ -17,27 +19,36 @@ class SnakeGame:
         self.root = root
         self.root.title("貪食蛇 Snake Game")
 
-        # 分數標籤
+        # 分數
         self.score = 0
-        self.score_label = tk.Label(
-            root, text="Score: 0", font=("Arial", 14)
-        )
+        self.speed = BASE_SPEED
+        self.paused = False
+
+        self.score_label = tk.Label(root, text="Score: 0", font=("Arial", 14))
         self.score_label.pack()
 
-        # 畫布
         self.canvas = tk.Canvas(
             root, width=WINDOW_WIDTH, height=WINDOW_HEIGHT, bg="black"
         )
         self.canvas.pack()
 
-        # 重新開始按鈕
-        self.restart_btn = tk.Button(
-            root, text="重新開始", font=("Arial", 12),
-            command=self.restart_game
-        )
-        self.restart_btn.pack(pady=5)
+        # 按鈕區
+        btn_frame = tk.Frame(root)
+        btn_frame.pack(pady=5)
 
+        self.pause_btn = tk.Button(
+            btn_frame, text="暫停", width=10, command=self.toggle_pause
+        )
+        self.pause_btn.pack(side="left", padx=5)
+
+        self.restart_btn = tk.Button(
+            btn_frame, text="重新開始", width=10, command=self.restart_game
+        )
+        self.restart_btn.pack(side="left", padx=5)
+
+        # 鍵盤控制
         self.root.bind("<Key>", self.change_direction)
+        self.root.bind("<space>", lambda e: self.toggle_pause())
 
         self.init_game()
         self.game_loop()
@@ -47,13 +58,18 @@ class SnakeGame:
         self.snake = [(100, 100), (80, 100), (60, 100)]
         self.food = None
         self.running = True
+        self.paused = False
         self.score = 0
+        self.speed = BASE_SPEED
         self.update_score()
+        self.pause_btn.config(text="暫停")
         self.create_food()
         self.canvas.delete("all")
 
     def update_score(self):
-        self.score_label.config(text=f"Score: {self.score}")
+        self.score_label.config(
+            text=f"Score: {self.score}   Speed: {BASE_SPEED - self.speed + 1}"
+        )
 
     def create_food(self):
         while True:
@@ -64,6 +80,9 @@ class SnakeGame:
                 break
 
     def change_direction(self, event):
+        if self.paused:
+            return
+
         key = event.keysym
         if key == UP and self.direction != DOWN:
             self.direction = UP
@@ -103,31 +122,47 @@ class SnakeGame:
             self.score += 10
             self.update_score()
             self.create_food()
+
+            # ⭐ 每 50 分加速
+            if self.score % 50 == 0 and self.speed > MIN_SPEED:
+                self.speed -= 10
         else:
             self.snake.pop()
 
     def draw(self):
         self.canvas.delete("all")
 
-        # 畫蛇
         for x, y in self.snake:
             self.canvas.create_rectangle(
-                x, y, x + CELL_SIZE, y + CELL_SIZE,
-                fill="green"
+                x, y, x + CELL_SIZE, y + CELL_SIZE, fill="green"
             )
 
-        # 畫食物
         fx, fy = self.food
         self.canvas.create_oval(
-            fx, fy, fx + CELL_SIZE, fy + CELL_SIZE,
-            fill="red"
+            fx, fy, fx + CELL_SIZE, fy + CELL_SIZE, fill="red"
         )
+
+        if self.paused:
+            self.canvas.create_text(
+                WINDOW_WIDTH // 2,
+                WINDOW_HEIGHT // 2,
+                fill="yellow",
+                font=("Arial", 24),
+                text="PAUSED"
+            )
 
     def game_loop(self):
         if self.running:
-            self.move_snake()
-            self.draw()
-            self.root.after(SPEED, self.game_loop)
+            if not self.paused:
+                self.move_snake()
+                self.draw()
+            self.root.after(self.speed, self.game_loop)
+
+    def toggle_pause(self):
+        if not self.running:
+            return
+        self.paused = not self.paused
+        self.pause_btn.config(text="繼續" if self.paused else "暫停")
 
     def game_over(self):
         self.running = False
