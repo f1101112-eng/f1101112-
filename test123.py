@@ -1,7 +1,6 @@
 import tkinter as tk
 import random
 
-# ===== 基本設定 =====
 CELL_SIZE = 20
 WIDTH = 30
 HEIGHT = 20
@@ -30,6 +29,7 @@ class SnakeGame:
         self.direction = "Right"
         self.snake = [(5, 5), (4, 5), (3, 5)]
         self.food = self.create_food()
+        self.running = True   # ⭐ 新增
 
         self.root.bind("<Key>", self.change_direction)
         self.update()
@@ -65,7 +65,7 @@ class SnakeGame:
 
         # 分數
         self.canvas.create_text(
-            60, 10,
+            10, 10,
             text=f"Score: {self.score}",
             fill="white",
             font=("Consolas", 12),
@@ -73,6 +73,9 @@ class SnakeGame:
         )
 
     def change_direction(self, event):
+        if not self.running:
+            return
+
         key = event.keysym
         opposites = {
             "Up": "Down", "Down": "Up",
@@ -95,10 +98,12 @@ class SnakeGame:
 
         new_head = (x, y)
 
-        # 撞牆或自己
-        if (x < 0 or x >= WIDTH or
+        # ⭐ 撞牆 or 撞到自己
+        if (
+            x < 0 or x >= WIDTH or
             y < 0 or y >= HEIGHT or
-            new_head in self.snake):
+            new_head in self.snake
+        ):
             self.game_over()
             return
 
@@ -111,6 +116,7 @@ class SnakeGame:
             self.snake.pop()
 
     def game_over(self):
+        self.running = False   # ⭐ 停止遊戲
         self.canvas.create_text(
             WIDTH * CELL_SIZE // 2,
             HEIGHT * CELL_SIZE // 2,
@@ -120,9 +126,10 @@ class SnakeGame:
         )
 
     def update(self):
-        self.move_snake()
-        self.draw()
-        self.root.after(SPEED, self.update)
+        if self.running:
+            self.move_snake()
+            self.draw()
+            self.root.after(SPEED, self.update)
 
 # ===== 主程式 =====
 root = tk.Tk()
